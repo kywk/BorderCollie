@@ -311,7 +311,7 @@ function hideTooltip() {
 }
 
 .project-group.alt-group {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--color-bg-alt);
 }
 
 .project-group:last-child {
@@ -341,9 +341,7 @@ function hideTooltip() {
   font-size: var(--font-size-sm);
 }
 
-.alt-group .gantt-label {
-  background: rgba(30, 41, 59, 0.8);
-}
+
 
 .project-rows {
   flex: 1;

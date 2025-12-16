@@ -7,10 +7,7 @@ import TableEditor from './TableEditor.vue'
 
 type EditorMode = 'text' | 'table'
 
-defineProps<{
-  toggleTheme: () => void
-  isDarkMode: boolean
-}>()
+
 
 const store = useProjectStore()
 const mode = ref<EditorMode>('text')
@@ -57,10 +54,8 @@ async function copyShareLink() {
           </button>
         </div>
         <button class="btn btn-ghost share-btn" @click="copyShareLink" title="複製分享連結">
-          {{ copyButtonText }}
-        </button>
-        <button class="theme-toggle" @click="toggleTheme" :title="isDarkMode ? '切換淺色模式' : '切換深色模式'">
-          {{ isDarkMode ? '☀️' : '🌙' }}
+          <span class="icon">🔗</span>
+          <span>{{ copyButtonText }}</span>
         </button>
       </div>
     </div>

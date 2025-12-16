@@ -66,40 +66,47 @@
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
   --transition-slow: 350ms ease;
+  /* Alternating Row Background */
+  --color-bg-alt: rgba(255, 255, 255, 0.02);
 }
 
 /* Light Theme */
 [data-theme="light"] {
-  --color-bg-primary: #f1f5f9;
-  /* Slightly darker background to reduce glare */
+  --color-bg-primary: #f8fafc;
+  /* Slate 50 - Brighter optimization */
   --color-bg-secondary: #ffffff;
-  /* Panels remain white for card effect */
-  --color-bg-tertiary: #e2e8f0;
-  /* Headers slightly darker */
-  --color-bg-hover: #cbd5e1;
+  /* Pure White */
+  --color-bg-tertiary: #f1f5f9;
+  /* Slate 100 - Very light gray for headers */
+  --color-bg-hover: #e2e8f0;
+  /* Slate 200 */
 
-  --color-text-primary: #020617;
-  /* Almost black for primary text */
-  --color-text-secondary: #334155;
-  /* Darker slate for secondary text */
-  --color-text-muted: #64748b;
+  --color-text-primary: #0f172a;
+  /* Slate 900 */
+  --color-text-secondary: #475569;
+  /* Slate 600 */
+  --color-text-muted: #94a3b8;
+  /* Slate 400 */
 
-  --color-border: #cbd5e1;
-  /* Darker borders for definition */
-  --color-border-focus: #2563eb;
+  --color-border: #e2e8f0;
+  /* Slate 200 - Lighter border */
+  --color-border-focus: #3b82f6;
 
   --color-accent: #2563eb;
   --color-accent-hover: #1d4ed8;
 
+  --color-bg-alt: rgba(0, 0, 0, 0.02);
+  /* Light gray for alternating rows in light mode */
+
   /* Gantt colors slightly more saturated for light theme */
-  --gantt-color-1: hsl(210, 70%, 50%);
-  --gantt-color-2: hsl(150, 60%, 45%);
-  --gantt-color-3: hsl(30, 75%, 50%);
-  --gantt-color-4: hsl(280, 55%, 55%);
-  --gantt-color-5: hsl(350, 65%, 55%);
-  --gantt-color-6: hsl(180, 60%, 45%);
-  --gantt-color-7: hsl(60, 65%, 45%);
-  --gantt-color-8: hsl(320, 60%, 50%);
+  --gantt-color-1: hsl(210, 80%, 60%);
+  --gantt-color-2: hsl(150, 70%, 45%);
+  --gantt-color-3: hsl(30, 85%, 55%);
+  --gantt-color-4: hsl(280, 65%, 60%);
+  --gantt-color-5: hsl(350, 75%, 60%);
+  --gantt-color-6: hsl(180, 70%, 45%);
+  --gantt-color-7: hsl(80, 75%, 45%);
+  --gantt-color-8: hsl(320, 70%, 55%);
 }
 
 /* Reset & Base */

@@ -399,7 +399,7 @@ function getOpacity(percentage: number): number {
 }
 
 .person-group.alt-group {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--color-bg-alt);
 }
 
 .person-group:last-child {
@@ -430,9 +430,7 @@ function getOpacity(percentage: number): number {
   font-size: var(--font-size-sm);
 }
 
-.alt-group .gantt-label {
-  background: rgba(30, 41, 59, 0.8);
-}
+
 
 /* 工作負載背景層 (跨越所有行) */
 .workload-background-layer {

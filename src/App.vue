@@ -51,10 +51,10 @@ onMounted(() => {
   <div id="app" class="app-container">
     <SplitPane :initial-ratio="0.35" :min-left="320" :min-right="400">
       <template #left>
-        <EditorPanel :toggle-theme="toggleTheme" :is-dark-mode="isDarkMode" />
+        <EditorPanel />
       </template>
       <template #right>
-        <GanttPanel />
+        <GanttPanel :toggle-theme="toggleTheme" :is-dark-mode="isDarkMode" />
       </template>
     </SplitPane>
   </div>
