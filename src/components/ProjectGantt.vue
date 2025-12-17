@@ -6,7 +6,7 @@ import { normalizeDate } from '@/parser/textParser'
 import type { ComputedPhase } from '@/types'
 
 const store = useProjectStore()
-const { months, totalWidth, getXPosition, getWidth, getProjectColor, getProjectGradient, getTodayPosition } = useGanttScale()
+const { months, totalWidth, getXPosition, getWidth, getProjectGradient, getTodayPosition } = useGanttScale()
 
 // Tooltip 狀態
 const tooltip = ref<{

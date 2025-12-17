@@ -6,7 +6,7 @@ import { normalizeDate } from '@/parser/textParser'
 import type { PersonAssignment } from '@/types'
 
 const store = useProjectStore()
-const { months, totalWidth, getXPosition, getWidth, getProjectColor, getProjectGradient } = useGanttScale()
+const { months, totalWidth, getXPosition, getWidth, getProjectGradient } = useGanttScale()
 
 // Tooltip 狀態
 const tooltip = ref<{

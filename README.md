@@ -87,7 +87,7 @@ Staff Portal:
 -   **Build Tool**: Vite
 -   **State Management**: Pinia
 -   **Styling**: Vanilla CSS (Variables & Scoped CSS)
--   **Utils**: `pako` (Gzip), `js-base64` (URL encoding)
+-   **Utils**: `lz-string` (URL 壓縮編碼)
 
 ## 📄 License
 
