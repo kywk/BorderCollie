@@ -372,7 +372,7 @@ function getOpacity(percentage: number): number {
   position: sticky;
   top: 0;
   background: var(--color-bg-tertiary);
-  z-index: 20;
+  z-index: 30;
   border-bottom: 2px solid var(--color-border);
 }
 
@@ -382,6 +382,10 @@ function getOpacity(percentage: number): number {
   display: flex;
   align-items: center;
   padding: var(--spacing-sm) var(--spacing-md);
+  position: sticky;
+  left: 0;
+  z-index: 31;
+  background: var(--color-bg-tertiary);
 }
 
 .month-header {
@@ -418,7 +422,7 @@ function getOpacity(percentage: number): number {
   border-right: 1px solid var(--color-border);
   position: sticky;
   left: 0;
-  z-index: 10;
+  z-index: 20;
 }
 
 .person-label {

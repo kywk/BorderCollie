@@ -98,6 +98,17 @@ async function handleExport(type: 'png' | 'svg' | 'ppt') {
   position: relative; /* Context for dropdown click away roughly */
 }
 
+#gantt-content {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#gantt-content > * {
+  flex: 1;
+}
+
 .panel-controls {
   display: flex;
   align-items: center;

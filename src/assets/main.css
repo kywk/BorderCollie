@@ -303,7 +303,7 @@ body {
 /* Gantt Chart */
 .gantt-container {
   position: relative;
-  overflow: auto;
+  /* overflow: auto;  <-- REMOVED: Causes sticky header to fail (nested scroll container) */
 }
 
 .gantt-header {
