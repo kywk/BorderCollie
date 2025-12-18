@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useProjectStore } from '@/stores/projectStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import SplitPane from '@/components/SplitPane.vue'
 import EditorPanel from '@/components/EditorPanel.vue'
 import GanttPanel from '@/components/GanttPanel.vue'
+import ConflictDialog from '@/components/ConflictDialog.vue'
 
 const store = useProjectStore()
+const workspaceStore = useWorkspaceStore()
 
 // Theme management
 const isDarkMode = ref(true)
@@ -17,22 +20,120 @@ function toggleTheme() {
 }
 
 import { decodeData } from '@/utils/sharing'
+import { fetchPublicGist, extractGistId } from '@/utils/gist'
+import { serializeFrontmatter, type Frontmatter } from '@/parser/frontmatterParser'
 
-onMounted(() => {
-  // Check for shared data in URL
+// Conflict handling
+const showConflict = ref(false)
+const conflictName = ref('')
+const pendingSharedData = ref('')
+
+// Loading state
+const isLoading = ref(false)
+const loadingMessage = ref('')
+
+function handleOverwrite() {
+  if (pendingSharedData.value) {
+    workspaceStore.importSharedData(pendingSharedData.value, 'overwrite')
+    pendingSharedData.value = ''
+  }
+}
+
+function handleRename() {
+  if (pendingSharedData.value) {
+    workspaceStore.importSharedData(pendingSharedData.value, 'rename')
+    pendingSharedData.value = ''
+  }
+}
+
+function handleCancel() {
+  pendingSharedData.value = ''
+}
+
+async function loadFromGist(gistId: string) {
+  isLoading.value = true
+  loadingMessage.value = '正在載入 Gist...'
+  
+  try {
+    const result = await fetchPublicGist(gistId)
+    
+    if (!result.success) {
+      alert(`Gist 載入失敗: ${result.error}`)
+      return false
+    }
+    
+    if (result.content) {
+      // 確保 Frontmatter 包含 gist ID
+      let contentToImport = result.content
+      
+      // 若原內容無 gist 欄位，自動加入
+      if (!contentToImport.includes('gist:')) {
+        const { frontmatter, content } = await import('@/parser/frontmatterParser')
+          .then(m => m.parseFrontmatter(result.content!))
+        
+        const newFrontmatter: Frontmatter = {
+          ...frontmatter,
+          name: frontmatter?.name ?? result.filename ?? 'Gist Project',
+          gist: gistId
+        }
+        contentToImport = serializeFrontmatter(newFrontmatter, content)
+      }
+      
+      // 匯入資料（處理衝突）
+      const importResult = workspaceStore.importSharedData(contentToImport)
+      
+      if (importResult.status === 'conflict') {
+        conflictName.value = importResult.conflictName ?? ''
+        pendingSharedData.value = contentToImport
+        showConflict.value = true
+      }
+      
+      return true
+    }
+  } finally {
+    isLoading.value = false
+    loadingMessage.value = ''
+  }
+  
+  return false
+}
+
+onMounted(async () => {
   const urlParams = new URLSearchParams(window.location.search)
   const sharedData = urlParams.get('data')
+  const gistParam = urlParams.get('gist')
   
-  if (sharedData) {
+  // Clean up URL
+  if (sharedData || gistParam) {
+    const newUrl = window.location.pathname
+    window.history.replaceState({}, '', newUrl)
+  }
+  
+  // Initialize workspace store first
+  workspaceStore.init()
+  
+  if (gistParam) {
+    // Handle ?gist=GIST_ID parameter
+    const gistId = extractGistId(gistParam)
+    if (gistId) {
+      await loadFromGist(gistId)
+    } else {
+      alert('無效的 Gist ID 格式')
+    }
+    store.init()
+  } else if (sharedData) {
+    // Handle ?data=... parameter
     const decoded = decodeData(sharedData)
     if (decoded) {
-      // Overwrite current data with shared data
-      store.updateText(decoded)
+      const result = workspaceStore.importSharedData(decoded)
       
-      // Clean up URL without reloading
-      const newUrl = window.location.pathname
-      window.history.replaceState({}, '', newUrl)
+      if (result.status === 'conflict') {
+        conflictName.value = result.conflictName ?? ''
+        pendingSharedData.value = decoded
+        showConflict.value = true
+      }
     }
+    store.init()
   } else {
     // Only init from local storage if no share data
     store.init()
@@ -57,6 +158,15 @@ onMounted(() => {
         <GanttPanel :toggle-theme="toggleTheme" :is-dark-mode="isDarkMode" />
       </template>
     </SplitPane>
+    
+    <!-- Conflict Dialog -->
+    <ConflictDialog
+      v-model:visible="showConflict"
+      :workspace-name="conflictName"
+      @overwrite="handleOverwrite"
+      @rename="handleRename"
+      @cancel="handleCancel"
+    />
   </div>
 </template>
 
