@@ -113,6 +113,11 @@ Staff Portal:
 - 工作區下拉選單：快速切換、新增、刪除專案
 - 自動遷移舊版 localStorage 資料
 
+### GitHub Gist 支援
+- 支援 `?gist=GIST_ID` URL 參數載入公開 Gist
+- Gist 專案顯示 🔗 標記，可一鍵 🔄 Refresh 重新載入
+- 自動儲存至本地工作區，保留 Gist ID 供同步
+
 ---
 
 ## UI/UX 設計規範
@@ -171,13 +176,18 @@ Staff Portal:
     - WorkspaceDropdown 下拉選單元件
     - 分享連結衝突處理（覆蓋/重新命名/取消）
     - 自動遷移舊版 localStorage 資料
+12. ✅ **GitHub Gist 支援**：
+    - `?gist=GIST_ID` URL 參數載入公開 Gist
+    - Gist 專案 🔗 標記與 🔄 Refresh 按鈕
+    - Gist Utility：fetchPublicGist, extractGistId, isValidGistId
 
 ---
 
 ## Backlog
 
-- 研究固定網址同步方案（無需手動分享 base64、無後端）
-  - 可能方案：GitHub Gist API、JSONBin.io、Firebase Realtime DB
+- [ ] Gist 寫入（需 OAuth）
+- [ ] 匯出/匯入 JSON 備份
+- [ ] 專案搜尋/過濾
 
 ---
 
@@ -189,7 +199,9 @@ Staff Portal:
 - `src/parser/frontmatterParser.ts` - Frontmatter 解析邏輯
 - `src/stores/projectStore.ts` - 專案狀態管理
 - `src/stores/workspaceStore.ts` - 工作區狀態管理
+- `src/utils/gist.ts` - Gist API 工具
 - `src/composables/useGanttScale.ts` - 甘特圖時間軸計算
 - `src/components/ProjectGantt.vue` - 專案甘特圖
 - `src/components/PersonGantt.vue` - 人力甘特圖
 - `src/components/WorkspaceDropdown.vue` - 工作區下拉選單
+- `idea/workspace-prompt.md` - Workspace + Gist 功能 AI Prompt

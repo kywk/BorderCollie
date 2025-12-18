@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { fetchPublicGist } from '@/utils/gist'
+import { parseFrontmatter, serializeFrontmatter, type Frontmatter } from '@/parser/frontmatterParser'
 import ConfirmDialog from './ConfirmDialog.vue'
 
 const workspaceStore = useWorkspaceStore()
@@ -9,6 +11,7 @@ const workspaceStore = useWorkspaceStore()
 const isOpen = ref(false)
 const showDeleteConfirm = ref(false)
 const workspaceToDelete = ref<string | null>(null)
+const isRefreshing = ref<string | null>(null)
 
 // Computed
 const workspaces = computed(() => workspaceStore.workspaces)
@@ -51,6 +54,46 @@ function cancelDelete() {
     workspaceToDelete.value = null
 }
 
+async function refreshGist(ws: { id: string, frontmatter: Frontmatter, content: string }, e: Event) {
+    e.stopPropagation()
+    
+    const gistId = ws.frontmatter.gist
+    if (!gistId) return
+    
+    isRefreshing.value = ws.id
+    
+    try {
+        const result = await fetchPublicGist(gistId)
+        
+        if (!result.success) {
+            alert(`Gist 重新載入失敗: ${result.error}`)
+            return
+        }
+        
+        if (result.content) {
+            // 解析 Gist 內容
+            const { frontmatter: gistFrontmatter, content: gistContent } = parseFrontmatter(result.content)
+            
+            // 保留原有名稱和 gist ID，但更新內容
+            const updatedFrontmatter: Frontmatter = {
+                ...gistFrontmatter,
+                name: ws.frontmatter.name, // 保持本地名稱
+                gist: gistId
+            }
+            
+            // 更新當前工作區
+            workspaceStore.switchWorkspace(ws.id)
+            workspaceStore.updateCurrentRawText(
+                serializeFrontmatter(updatedFrontmatter, gistContent)
+            )
+            
+            alert('已從 Gist 重新載入內容！')
+        }
+    } finally {
+        isRefreshing.value = null
+    }
+}
+
 // Format date for display
 function formatDate(dateStr?: string): string {
     if (!dateStr) return ''
@@ -88,7 +131,10 @@ function formatDate(dateStr?: string): string {
                         @click="selectWorkspace(ws.id)"
                     >
                         <div class="workspace-info">
-                            <span class="workspace-name">{{ ws.frontmatter.name }}</span>
+                            <div class="workspace-name-row">
+                                <span class="workspace-name">{{ ws.frontmatter.name }}</span>
+                                <span v-if="ws.frontmatter.gist" class="gist-badge" title="連結至 Gist">🔗</span>
+                            </div>
                             <span v-if="ws.frontmatter.description" class="workspace-desc">
                                 {{ ws.frontmatter.description }}
                             </span>
@@ -96,14 +142,26 @@ function formatDate(dateStr?: string): string {
                                 {{ formatDate(ws.frontmatter.createdAt) }}
                             </span>
                         </div>
-                        <button 
-                            v-if="workspaces.length > 1"
-                            class="delete-btn"
-                            @click="confirmDelete(ws.id, $event)"
-                            title="刪除專案"
-                        >
-                            🗑️
-                        </button>
+                        <div class="workspace-actions">
+                            <button 
+                                v-if="ws.frontmatter.gist"
+                                class="refresh-btn"
+                                :class="{ refreshing: isRefreshing === ws.id }"
+                                @click="refreshGist(ws, $event)"
+                                title="從 Gist 重新載入"
+                                :disabled="isRefreshing === ws.id"
+                            >
+                                🔄
+                            </button>
+                            <button 
+                                v-if="workspaces.length > 1"
+                                class="delete-btn"
+                                @click="confirmDelete(ws.id, $event)"
+                                title="刪除專案"
+                            >
+                                🗑️
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -224,6 +282,12 @@ function formatDate(dateStr?: string): string {
     flex: 1;
 }
 
+.workspace-name-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
 .workspace-name {
     font-weight: 600;
     font-size: 1rem;
@@ -231,6 +295,11 @@ function formatDate(dateStr?: string): string {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.gist-badge {
+    font-size: 0.75rem;
+    opacity: 0.7;
 }
 
 .workspace-item.active .workspace-name {
@@ -244,6 +313,12 @@ function formatDate(dateStr?: string): string {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.workspace-actions {
+    display: flex;
+    gap: var(--spacing-xs);
+    flex-shrink: 0;
 }
 
 .delete-btn {
@@ -267,6 +342,39 @@ function formatDate(dateStr?: string): string {
     background: rgba(239, 68, 68, 0.15);
     border-color: rgba(239, 68, 68, 0.3);
     transform: scale(1.05);
+}
+
+.refresh-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    opacity: 0.5;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+    font-size: 1.1rem;
+}
+
+.refresh-btn:hover {
+    opacity: 1;
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.3);
+    transform: scale(1.05);
+}
+
+.refresh-btn.refreshing {
+    opacity: 1;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 .dropdown-divider {
