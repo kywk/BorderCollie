@@ -12,5 +12,5 @@ export default defineConfig({
             '@': resolve(__dirname, 'src')
         }
     },
-    base: process.env.GITHUB_ACTIONS ? '/BorderCollie/' : './'
+    base: process.env.GITHUB_ACTIONS ? '/border-collie/' : './'
 })
