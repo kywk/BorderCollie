@@ -2,11 +2,40 @@
 import { computed, ref } from 'vue'
 import { useProjectStore } from '@/stores/projectStore'
 import { useGanttScale } from '@/composables/useGanttScale'
+import { useGanttScaleShared } from '@/shared/composables/useGanttScale'
 import { normalizeDate } from '@/parser/textParser'
-import type { ComputedPhase } from '@/types'
+import type { ComputedPhase, Project, GanttScale, TimeRange } from '@/types'
 
+// Props 定義：允許外部傳入資料 (Sheltie 使用)
+const props = withDefaults(defineProps<{
+  // 外部傳入資料
+  computedPhases?: ComputedPhase[]
+  projects?: Project[]
+  scale?: GanttScale
+  barStyle?: 'block' | 'arrow'
+  timeRange?: TimeRange
+  // 控制項
+  showHideControl?: boolean
+}>(), {
+  showHideControl: true
+})
+
+// 取得 store 作為預設資料來源
 const store = useProjectStore()
-const { months, totalWidth, getXPosition, getWidth, getProjectGradient, getTodayPosition } = useGanttScale()
+
+// 資料來源：優先使用 props，否則使用 store
+const phases = computed(() => props.computedPhases ?? store.computedPhases)
+const projects = computed(() => props.projects ?? store.projects)
+const scaleValue = computed(() => props.scale ?? store.scale)
+const barStyleValue = computed(() => props.barStyle ?? store.barStyle)
+const timeRangeValue = computed(() => props.timeRange ?? store.timeRange)
+
+// 根據資料來源選擇使用的 ganttScale
+const ganttScaleResult = props.computedPhases 
+  ? useGanttScaleShared({ timeRange: timeRangeValue, scale: scaleValue })
+  : useGanttScale()
+
+const { months, totalWidth, getXPosition, getWidth, getProjectGradient, getTodayPosition } = ganttScaleResult
 
 // 隱藏狀態管理
 const hiddenProjects = ref<Set<string>>(new Set())
@@ -60,7 +89,7 @@ function isOverlapping(
 
 // 取得原始 Phase 資料以判斷是否為接續階段
 function getOriginalPhase(projectIndex: number, phaseName: string) {
-  const project = store.projects[projectIndex]
+  const project = projects.value[projectIndex]
   if (!project) return null
   return project.phases.find(p => p.name === phaseName)
 }
@@ -77,7 +106,7 @@ const projectRows = computed(() => {
   let currentProjectName = ''
   let currentProjectData: typeof result[0] | null = null
 
-  for (const phase of store.computedPhases) {
+  for (const phase of phases.value) {
     // 新專案
     if (phase.projectName !== currentProjectName) {
       if (currentProjectData) {
@@ -119,9 +148,9 @@ const projectRows = computed(() => {
         // 如果是接續階段，優先嘗試放在包含前一階段的行
         if (isInheritedStart) {
           // 找出前一個階段在哪一行
-          const phaseIndex = store.computedPhases.indexOf(phase)
+          const phaseIndex = phases.value.indexOf(phase)
           if (phaseIndex > 0) {
-            const prevPhase = store.computedPhases[phaseIndex - 1]
+            const prevPhase = phases.value[phaseIndex - 1]
             if (prevPhase.projectName === phase.projectName) {
               const prevPhaseInRow = row.some(p => p.name === prevPhase.name)
               if (prevPhaseInRow) {
@@ -230,7 +259,7 @@ function hideTooltip() {
               'year-even': month.isEvenYear,
               'year-first': month.isFirstMonthOfYear 
             }"
-            :style="{ width: store.scale.monthWidth + 'px' }"
+            :style="{ width: scaleValue.monthWidth + 'px' }"
           >
             {{ month.shortLabel }}
           </div>
@@ -256,7 +285,7 @@ function hideTooltip() {
           <!-- 專案名稱 (跨越所有行，垂直居中) -->
           <div 
             class="gantt-label project-label"
-            :style="{ height: project.rows.length * store.scale.rowHeight + 'px' }"
+            :style="{ height: project.rows.length * scaleValue.rowHeight + 'px' }"
           >
             <button 
               class="hide-toggle-btn" 
@@ -278,7 +307,7 @@ function hideTooltip() {
               v-for="(row, rowIdx) in project.rows"
               :key="rowIdx"
               class="gantt-row"
-              :style="{ height: store.scale.rowHeight + 'px' }"
+              :style="{ height: scaleValue.rowHeight + 'px' }"
             >
               <div
                 class="gantt-timeline"
@@ -289,7 +318,7 @@ function hideTooltip() {
                   v-for="month in months"
                   :key="month.label"
                   class="month-line"
-                  :style="{ width: store.scale.monthWidth + 'px' }"
+                  :style="{ width: scaleValue.monthWidth + 'px' }"
                 />
                 
               <div
@@ -297,13 +326,13 @@ function hideTooltip() {
                   :key="phase.name"
                   class="gantt-bar"
                   :class="{ 
-                    'arrow-style': store.barStyle === 'arrow'
+                    'arrow-style': barStyleValue === 'arrow'
                   }"
                   :style="{
-                    left: (getXPosition(phase.startDate) - (store.barStyle === 'arrow' && phase.isContinuation ? 24 : 0)) + 'px',
-                    width: (getWidth(phase.startDate, phase.endDate) + (store.barStyle === 'arrow' && phase.isContinuation ? 24 : 0)) + 'px',
+                    left: (getXPosition(phase.startDate) - (barStyleValue === 'arrow' && phase.isContinuation ? 24 : 0)) + 'px',
+                    width: (getWidth(phase.startDate, phase.endDate) + (barStyleValue === 'arrow' && phase.isContinuation ? 24 : 0)) + 'px',
                     background: getProjectGradient(phase.projectIndex),
-                    zIndex: store.barStyle === 'arrow' ? (100 - rowIdx * 10 - index) : 10
+                    zIndex: barStyleValue === 'arrow' ? (100 - rowIdx * 10 - index) : 10
                   }"
                   @mouseenter="showTooltip($event, phase)"
                   @mouseleave="hideTooltip"

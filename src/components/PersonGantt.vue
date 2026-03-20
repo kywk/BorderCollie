@@ -2,11 +2,40 @@
 import { computed, ref } from 'vue'
 import { useProjectStore } from '@/stores/projectStore'
 import { useGanttScale } from '@/composables/useGanttScale'
+import { useGanttScaleShared } from '@/shared/composables/useGanttScale'
 import { normalizeDate } from '@/parser/textParser'
-import type { PersonAssignment } from '@/types'
+import type { PersonAssignment, GanttScale, TimeRange } from '@/types'
 
+// Props 定義：允許外部傳入資料 (Sheltie 使用)
+const props = withDefaults(defineProps<{
+  // 外部傳入資料
+  personAssignments?: PersonAssignment[]
+  allPersons?: string[]
+  scale?: GanttScale
+  barStyle?: 'block' | 'arrow'
+  timeRange?: TimeRange
+  // 控制項
+  showHideControl?: boolean
+}>(), {
+  showHideControl: true
+})
+
+// 取得 store 作為預設資料來源
 const store = useProjectStore()
-const { months, totalWidth, getXPosition, getWidth, getProjectGradient, getTodayPosition } = useGanttScale()
+
+// 資料來源：優先使用 props，否則使用 store
+const personAssignmentsValue = computed(() => props.personAssignments ?? store.personAssignments)
+const allPersonsValue = computed(() => props.allPersons ?? store.allPersons)
+const scaleValue = computed(() => props.scale ?? store.scale)
+const barStyleValue = computed(() => props.barStyle ?? store.barStyle)
+const timeRangeValue = computed(() => props.timeRange ?? store.timeRange)
+
+// 根據資料來源選擇使用的 ganttScale
+const ganttScaleResult = props.personAssignments 
+  ? useGanttScaleShared({ timeRange: timeRangeValue, scale: scaleValue })
+  : useGanttScale()
+
+const { months, totalWidth, getXPosition, getWidth, getProjectGradient, getTodayPosition } = ganttScaleResult
 
 // 隱藏狀態管理
 const hiddenPersons = ref<Set<string>>(new Set())
@@ -73,15 +102,15 @@ function isMonthInRange(year: number, month: number, startDate: string, endDate:
 const monthlyWorkload = computed(() => {
   const result = new Map<string, Map<string, number>>() // person -> month -> average load
 
-  for (const assignment of store.personAssignments) {
+  for (const assignment of personAssignmentsValue.value) {
     if (!result.has(assignment.person)) {
       result.set(assignment.person, new Map())
     }
   }
 
   // 針對每個人員計算
-  for (const person of store.allPersons) {
-    const assignments = store.personAssignments.filter(a => a.person === person)
+  for (const person of allPersonsValue.value) {
+    const assignments = personAssignmentsValue.value.filter(a => a.person === person)
     const personMap = result.get(person)!
 
     for (const month of months.value) {
@@ -152,7 +181,7 @@ const personRows = computed(() => {
 
   // 先按人員分組
   const personMap = new Map<string, PersonAssignment[]>()
-  for (const assignment of store.personAssignments) {
+  for (const assignment of personAssignmentsValue.value) {
     if (!personMap.has(assignment.person)) {
       personMap.set(assignment.person, [])
     }
@@ -284,7 +313,7 @@ function getOpacity(percentage: number): number {
               'year-even': month.isEvenYear,
               'year-first': month.isFirstMonthOfYear 
             }"
-            :style="{ width: store.scale.monthWidth + 'px' }"
+            :style="{ width: scaleValue.monthWidth + 'px' }"
           >
             {{ month.shortLabel }}
           </div>
@@ -310,7 +339,7 @@ function getOpacity(percentage: number): number {
           <!-- 人員名稱 (跨越所有行，垂直居中) -->
           <div 
             class="gantt-label person-label"
-            :style="{ height: personData.rows.length * store.scale.rowHeight + 'px' }"
+            :style="{ height: personData.rows.length * scaleValue.rowHeight + 'px' }"
           >
             <button 
               class="hide-toggle-btn" 
@@ -331,7 +360,7 @@ function getOpacity(percentage: number): number {
             class="workload-background-layer"
             :style="{ 
               width: totalWidth + 'px',
-              height: personData.rows.length * store.scale.rowHeight + 'px'
+              height: personData.rows.length * scaleValue.rowHeight + 'px'
             }"
           >
             <div
@@ -343,7 +372,7 @@ function getOpacity(percentage: number): number {
                 'workload-underload': getMonthWorkloadStatus(personData.person, month.label) === 'underload',
                 'workload-unavailable': false
               }"
-              :style="{ width: store.scale.monthWidth + 'px' }"
+              :style="{ width: scaleValue.monthWidth + 'px' }"
             />
           </div>
           
@@ -353,7 +382,7 @@ function getOpacity(percentage: number): number {
               v-for="(row, rowIdx) in personData.rows"
               :key="rowIdx"
               class="gantt-row"
-              :style="{ height: store.scale.rowHeight + 'px' }"
+              :style="{ height: scaleValue.rowHeight + 'px' }"
             >
               <div
                 class="gantt-timeline"
@@ -364,7 +393,7 @@ function getOpacity(percentage: number): number {
                   v-for="month in months"
                   :key="month.label"
                   class="month-cell"
-                  :style="{ width: store.scale.monthWidth + 'px' }"
+                  :style="{ width: scaleValue.monthWidth + 'px' }"
                 />
                 
                 <!-- 投入 Bar -->
@@ -373,14 +402,14 @@ function getOpacity(percentage: number): number {
                   :key="`${assignment.projectName}-${assignment.phaseName}-${idx}`"
                   class="gantt-bar"
                   :class="{ 
-                    'arrow-style': store.barStyle === 'arrow'
+                    'arrow-style': barStyleValue === 'arrow'
                   }"
                   :style="{
-                    left: (getXPosition(assignment.startDate) - (store.barStyle === 'arrow' && assignment.isContinuation ? 24 : 0)) + 'px',
-                    width: (getWidth(assignment.startDate, assignment.endDate) + (store.barStyle === 'arrow' && assignment.isContinuation ? 24 : 0)) + 'px',
+                    left: (getXPosition(assignment.startDate) - (barStyleValue === 'arrow' && assignment.isContinuation ? 24 : 0)) + 'px',
+                    width: (getWidth(assignment.startDate, assignment.endDate) + (barStyleValue === 'arrow' && assignment.isContinuation ? 24 : 0)) + 'px',
                     background: getProjectGradient(assignment.projectIndex),
                     opacity: getOpacity(assignment.percentage),
-                    zIndex: store.barStyle === 'arrow' ? (100 - idx) : 10
+                    zIndex: barStyleValue === 'arrow' ? (100 - idx) : 10
                   }"
                   @mouseenter="showTooltip($event, assignment)"
                   @mouseleave="hideTooltip"

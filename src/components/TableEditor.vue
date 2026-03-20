@@ -1,137 +1,155 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useProjectStore } from '@/stores/projectStore'
-import type { Project, Phase } from '@/types'
+import type { Project, Phase } from '@/shared/types'
 
-const store = useProjectStore()
-
-// 計算所有人員列表
-// 計算所有人員列表
-const extraPersons = ref<string[]>([])
-const allPersons = computed(() => {
-  const combined = new Set([...store.allPersons, ...extraPersons.value])
-  return Array.from(combined).sort()
+// ── Props & Emits ──────────────────────────────────────────────
+const props = withDefaults(defineProps<{
+    projects: Project[]
+}>(), {
+    projects: () => []
 })
+
+const emit = defineEmits<{
+    (e: 'update:projects', value: Project[]): void
+}>()
+
+// ── 額外人員（UI 輸入，尚未有任何 assignment） ─────────────────
+const extraPersons = ref<string[]>([])
+
+// 計算所有人員列表（從 projects 推導 + 額外新增的）
+const allPersons = computed(() => {
+    const fromProjects = new Set(
+        props.projects.flatMap(p =>
+            p.phases.flatMap(ph => ph.assignments.map(a => a.name))
+        )
+    )
+    const combined = new Set([...fromProjects, ...extraPersons.value])
+    return Array.from(combined).sort()
+})
+
+// ── Helper：更新 projects 並 emit ────────────────────────────────
+function updated(projects: Project[]) {
+    emit('update:projects', projects)
+}
 
 // 新增專案
 function addProject() {
-  const newProject: Project = {
-    name: '新專案',
-    phases: [{
-      name: '階段1',
-      startDate: new Date().toISOString().slice(0, 7),
-      endDate: new Date().toISOString().slice(0, 7),
-      assignments: []
-    }]
-  }
-  store.updateProjects([...store.projects, newProject])
+    const newProject: Project = {
+        name: '新專案',
+        phases: [{
+            name: '階段1',
+            startDate: new Date().toISOString().slice(0, 7),
+            endDate: new Date().toISOString().slice(0, 7),
+            assignments: []
+        }]
+    }
+    updated([...props.projects, newProject])
 }
 
 // 新增階段
 function addPhase(projectIndex: number) {
-  const projects = [...store.projects]
-  const project = projects[projectIndex]
-  project.phases.push({
-    name: '新階段',
-    startDate: null, // 接續前一階段
-    endDate: new Date().toISOString().slice(0, 7),
-    assignments: []
-  })
-  store.updateProjects(projects)
+    const projects = props.projects.map((p, i) =>
+        i === projectIndex
+            ? { ...p, phases: [...p.phases, { name: '新階段', startDate: null, endDate: new Date().toISOString().slice(0, 7), assignments: [] }] }
+            : p
+    )
+    updated(projects)
 }
 
 // 更新專案名稱
 function updateProjectName(projectIndex: number, name: string) {
-  const projects = [...store.projects]
-  projects[projectIndex].name = name
-  store.updateProjects(projects)
+    updated(props.projects.map((p, i) => i === projectIndex ? { ...p, name } : p))
 }
 
-// 更新階段
+// 更新階段欄位
 function updatePhase(
-  projectIndex: number,
-  phaseIndex: number,
-  field: keyof Phase,
-  value: string | null
+    projectIndex: number,
+    phaseIndex: number,
+    field: keyof Phase,
+    value: string | null
 ) {
-  const projects = [...store.projects]
-  const phase = projects[projectIndex].phases[phaseIndex]
-  
-  if (field === 'startDate') {
-    phase.startDate = value === '--' || value === '' ? null : value
-  } else if (field === 'name' || field === 'endDate') {
-    ;(phase[field] as string) = value as string
-  }
-  
-  store.updateProjects(projects)
+    const projects = props.projects.map((p, pi) => {
+        if (pi !== projectIndex) return p
+        const phases = p.phases.map((ph, phi) => {
+            if (phi !== phaseIndex) return ph
+            const u = { ...ph }
+            if (field === 'startDate') {
+                u.startDate = value === '--' || value === '' ? null : value
+            } else if (field === 'name' || field === 'endDate') {
+                (u[field] as string) = value as string
+            }
+            return u
+        })
+        return { ...p, phases }
+    })
+    updated(projects)
 }
 
 // 更新人員投入
 function updateAssignment(
-  projectIndex: number,
-  phaseIndex: number,
-  person: string,
-  percentage: string
+    projectIndex: number,
+    phaseIndex: number,
+    person: string,
+    percentage: string
 ) {
-  const projects = [...store.projects]
-  const phase = projects[projectIndex].phases[phaseIndex]
-  const value = parseFloat(percentage) || 0
-  
-  const existingIndex = phase.assignments.findIndex(a => a.person === person)
-  
-  if (value > 0) {
-    if (existingIndex >= 0) {
-      phase.assignments[existingIndex].percentage = value
-    } else {
-      phase.assignments.push({ person, percentage: value })
-    }
-  } else {
-    if (existingIndex >= 0) {
-      phase.assignments.splice(existingIndex, 1)
-    }
-  }
-  
-  store.updateProjects(projects)
+    const value = parseFloat(percentage) || 0
+    const projects = props.projects.map((p, pi) => {
+        if (pi !== projectIndex) return p
+        const phases = p.phases.map((ph, phi) => {
+            if (phi !== phaseIndex) return ph
+            const assignments = [...ph.assignments]
+            const idx = assignments.findIndex(a => a.name === person)
+            if (value > 0) {
+                if (idx >= 0) assignments[idx] = { ...assignments[idx], percentage: value }
+                else assignments.push({ name: person, percentage: value })
+            } else if (idx >= 0) {
+                assignments.splice(idx, 1)
+            }
+            return { ...ph, assignments }
+        })
+        return { ...p, phases }
+    })
+    updated(projects)
 }
 
 // 取得人員投入
 function getAssignment(phase: Phase, person: string): string {
-  const assignment = phase.assignments.find(a => a.person === person)
-  return assignment ? String(assignment.percentage) : ''
+    const a = phase.assignments.find(a => a.name === person)
+    return a ? String(a.percentage) : ''
 }
 
 // 計算階段總人力
 function getTotalAssignment(phase: Phase): number {
-  return phase.assignments.reduce((sum, a) => sum + a.percentage, 0)
+    return phase.assignments.reduce((sum, a) => sum + a.percentage, 0)
 }
 
 // 刪除階段
 function removePhase(projectIndex: number, phaseIndex: number) {
-  const projects = [...store.projects]
-  projects[projectIndex].phases.splice(phaseIndex, 1)
-  if (projects[projectIndex].phases.length === 0) {
-    projects.splice(projectIndex, 1)
-  }
-  store.updateProjects(projects)
+    const projects = props.projects
+        .map((p, pi) => pi === projectIndex
+            ? { ...p, phases: p.phases.filter((_, phi) => phi !== phaseIndex) }
+            : p
+        )
+        .filter(p => p.phases.length > 0)
+    updated(projects)
 }
 
 // 切換專案 pending 狀態
 function togglePending(projectIndex: number) {
-  const projects = [...store.projects]
-  projects[projectIndex].pending = !projects[projectIndex].pending
-  store.updateProjects(projects)
+    updated(props.projects.map((p, i) =>
+        i === projectIndex ? { ...p, pending: !p.pending } : p
+    ))
 }
 
 // 新增人員
 const newPersonName = ref('')
 function addPerson() {
-  const name = newPersonName.value.trim()
-  if (!name) return
-  
-  if (!store.allPersons.includes(name) && !extraPersons.value.includes(name)) {
-    extraPersons.value.push(name)
-  }
-  newPersonName.value = ''
+    const name = newPersonName.value.trim()
+    if (!name) return
+    if (!extraPersons.value.includes(name)) {
+        extraPersons.value.push(name)
+    }
+    newPersonName.value = ''
 }
 </script>
 
@@ -170,9 +188,9 @@ function addPerson() {
           </tr>
         </thead>
         <tbody>
-          <template v-for="(project, pIdx) in store.projects" :key="pIdx">
-            <tr 
-              v-for="(phase, phIdx) in project.phases" 
+          <template v-for="(project, pIdx) in projects" :key="pIdx">
+            <tr
+              v-for="(phase, phIdx) in project.phases"
               :key="`${pIdx}-${phIdx}`"
               :class="{ 'is-pending': project.pending }"
             >
@@ -209,7 +227,7 @@ function addPerson() {
                   </button>
                 </div>
               </td>
-              
+
               <!-- 階段名稱 -->
               <td class="col-phase">
                 <input
@@ -217,7 +235,7 @@ function addPerson() {
                   @change="e => updatePhase(pIdx, phIdx, 'name', (e.target as HTMLInputElement).value)"
                 />
               </td>
-              
+
               <!-- 開始時間 -->
               <td class="col-date">
                 <input
@@ -226,7 +244,7 @@ function addPerson() {
                   @change="e => updatePhase(pIdx, phIdx, 'startDate', (e.target as HTMLInputElement).value)"
                 />
               </td>
-              
+
               <!-- 結束時間 -->
               <td class="col-date">
                 <input
@@ -235,12 +253,12 @@ function addPerson() {
                   @change="e => updatePhase(pIdx, phIdx, 'endDate', (e.target as HTMLInputElement).value)"
                 />
               </td>
-              
+
               <!-- 人力投入 (自動計算) -->
               <td class="col-total">
                 <span class="total-value">{{ getTotalAssignment(phase).toFixed(1) }}</span>
               </td>
-              
+
               <!-- 各人員投入 -->
               <td
                 v-for="person in allPersons"
@@ -256,7 +274,7 @@ function addPerson() {
                   @change="e => updateAssignment(pIdx, phIdx, person, (e.target as HTMLInputElement).value)"
                 />
               </td>
-              
+
               <!-- 操作 -->
               <td class="col-actions">
                 <button
@@ -331,22 +349,10 @@ function addPerson() {
   opacity: 1;
 }
 
-.col-phase {
-  min-width: 100px;
-}
-
-.col-date {
-  min-width: 100px;
-}
-
-.col-date input {
-  text-align: center;
-}
-
-.col-total {
-  min-width: 70px;
-  text-align: center;
-}
+.col-phase { min-width: 100px; }
+.col-date { min-width: 100px; }
+.col-date input { text-align: center; }
+.col-total { min-width: 70px; text-align: center; }
 
 .total-value {
   display: inline-block;
@@ -357,19 +363,9 @@ function addPerson() {
   color: var(--color-accent);
 }
 
-.col-person {
-  min-width: 60px;
-}
-
-.col-person input {
-  text-align: center;
-  width: 50px;
-}
-
-.col-actions {
-  width: 40px;
-  text-align: center;
-}
+.col-person { min-width: 60px; }
+.col-person input { text-align: center; width: 50px; }
+.col-actions { width: 40px; text-align: center; }
 
 .btn-delete {
   width: 24px;
@@ -390,13 +386,8 @@ function addPerson() {
 }
 
 /* Pending state styles */
-.is-pending {
-  opacity: 0.5;
-}
-
-.is-pending td {
-  background: var(--color-bg-tertiary);
-}
+.is-pending { opacity: 0.5; }
+.is-pending td { background: var(--color-bg-tertiary); }
 
 .project-actions {
   display: flex;
@@ -422,10 +413,7 @@ function addPerson() {
   transition: all var(--transition-fast);
 }
 
-.btn-pending:hover {
-  opacity: 1;
-  background: var(--color-bg-secondary);
-}
+.btn-pending:hover { opacity: 1; background: var(--color-bg-secondary); }
 
 .btn-pending.is-pending {
   background: var(--color-warning);

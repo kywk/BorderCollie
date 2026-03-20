@@ -1,21 +1,27 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
-import { useProjectStore } from '@/stores/projectStore'
 
-const store = useProjectStore()
+const props = withDefaults(defineProps<{
+    modelValue: string
+}>(), {
+    modelValue: ''
+})
+
+const emit = defineEmits<{
+    (e: 'update:modelValue', value: string): void
+}>()
 
 // 本地狀態：即時顯示用戶輸入
 const localText = ref('')
 
 // Debounce 更新：延遲 300ms 觸發解析和儲存
 const debouncedUpdate = useDebounceFn((value: string) => {
-    store.updateText(value)
+    emit('update:modelValue', value)
 }, 300)
 
-// 監聽 store 變化（切換 workspace 時同步）
-watch(() => store.rawText, (newValue) => {
-    // 只有當 store 變化來自外部（非本地輸入）時才更新
+// 監聽 prop 變化（切換 workspace 時同步）
+watch(() => props.modelValue, (newValue) => {
     if (newValue !== localText.value) {
         localText.value = newValue
     }

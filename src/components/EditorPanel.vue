@@ -2,8 +2,8 @@
 import { ref } from 'vue'
 import { useProjectStore } from '@/stores/projectStore'
 import { encodeData } from '@/utils/sharing'
-import TextEditor from './TextEditor.vue'
-import TableEditor from './TableEditor.vue'
+import TextEditor from './TextEditorWithStore.vue'
+import TableEditor from './TableEditorWithStore.vue'
 import WorkspaceDropdown from './WorkspaceDropdown.vue'
 
 type EditorMode = 'text' | 'table'
