@@ -20,7 +20,7 @@ const extraPersons = ref<string[]>([])
 const allPersons = computed(() => {
     const fromProjects = new Set(
         props.projects.flatMap(p =>
-            p.phases.flatMap(ph => ph.assignments.map(a => a.name))
+            p.phases.flatMap(ph => ph.assignments.map(a => a.person))
         )
     )
     const combined = new Set([...fromProjects, ...extraPersons.value])
@@ -98,10 +98,10 @@ function updateAssignment(
         const phases = p.phases.map((ph, phi) => {
             if (phi !== phaseIndex) return ph
             const assignments = [...ph.assignments]
-            const idx = assignments.findIndex(a => a.name === person)
+            const idx = assignments.findIndex(a => a.person === person)
             if (value > 0) {
                 if (idx >= 0) assignments[idx] = { ...assignments[idx], percentage: value }
-                else assignments.push({ name: person, percentage: value })
+                else assignments.push({ person: person, percentage: value })
             } else if (idx >= 0) {
                 assignments.splice(idx, 1)
             }
@@ -114,7 +114,7 @@ function updateAssignment(
 
 // 取得人員投入
 function getAssignment(phase: Phase, person: string): string {
-    const a = phase.assignments.find(a => a.name === person)
+    const a = phase.assignments.find(a => a.person === person)
     return a ? String(a.percentage) : ''
 }
 

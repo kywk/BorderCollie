@@ -19,7 +19,9 @@ BorderCollie 是一個現代化、輕量級的專案管理與人力資源甘特�
     -   支援將特定專案設為 pending (擱置) 狀態。
     -   Pending 專案仍保留於編輯區可供編輯，但會自動從專案甘特圖與人力甘特圖中移除。
     -   Pending 專案不計入人力負荷計算，方便進行模擬排程或暫停中的專案管理。
--   **純文字編輯 (Text-to-Gantt)**：使用簡單直覺的純文字語法快速定義專案、階段與人員指派。
+-   **雙編輯模式**：
+    -   **純文字編輯 (Text-to-Gantt)**：使用簡單直覺的純文字語法快速定義專案、階段與人員指派。
+    -   **表單編輯 (Table Editor)**：以結構化表格介面編輯專案，支援新增/刪除專案與階段、人員指派，適合不熟悉純文字語法的使用者。
 -   **精美現代 UI**：
     -   **Glassmorphism 設計**：毛玻璃面板標題，漸層背景與陰影效果。
     -   **今日標記**：紅色大頭針標記當日位置，從日期列垂直貫穿整個甘特圖。
@@ -162,7 +164,7 @@ excel/
 -   **Build Tool**: Vite
 -   **State Management**: Pinia
 -   **Styling**: Vanilla CSS (Variables & Scoped CSS)
--   **Utils**: `lz-string` (URL 壓縮編碼), `html-to-image` (圖片匯出), `pptxgenjs` (PPT 匯出)
+-   **Utils**: `lz-string` (URL 壓縮編碼), `html-to-image` (圖片匯出), `pptxgenjs` (PPT 匯出), `exceljs` (Excel 匯出), `@vueuse/core` (Vue 組合式工具), `lodash-es` (通用工具函式)
 
 ## 📄 License
 

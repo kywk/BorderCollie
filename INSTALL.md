@@ -4,8 +4,8 @@
 
 ## 環境需求
 
--   **Node.js**: v16.0.0 或更高版本
--   **npm**: v7.0.0 或更高版本
+-   **Node.js**: v20.0.0 或更高版本（建議使用 [Volta](https://volta.sh/) 管理，專案已鎖定 v20.20.1）
+-   **npm**: v9.0.0 或更高版本
 
 ## 本地開發 (Development)
 
@@ -54,7 +54,7 @@
 
 ```dockerfile
 # Build stage
-FROM node:18-alpine as build-stage
+FROM node:20-alpine as build-stage
 WORKDIR /app
 COPY package*.json ./
 RUN npm install

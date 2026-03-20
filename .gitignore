@@ -33,3 +33,4 @@ test-results/
 
 # Drafts (AI-generated implementation plans)
 idea/.drafts/
+tsconfig.tsbuildinfo
