@@ -5,7 +5,7 @@
  * 可被 Sheltie 等外部專案引用
  */
 
-import { computed, type Ref } from 'vue'
+import { computed, type Ref, type ComputedRef } from 'vue'
 import type { Project, ComputedPhase, PersonAssignment, TimeRange } from '../types'
 import { normalizeDate } from '../parser/textParser'
 
@@ -18,7 +18,7 @@ function getNextDay(date: string): string {
   return `${year}-${month}-${day}`
 }
 
-export function useGanttData(projects: Ref<Project[]>) {
+export function useGanttData(projects: Ref<Project[]> | ComputedRef<Project[]>) {
   const computedPhases = computed<ComputedPhase[]>(() => {
     const result: ComputedPhase[] = []
     const activeProjects = projects.value.filter(p => !p.pending)

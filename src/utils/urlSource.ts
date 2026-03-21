@@ -33,20 +33,6 @@ export function decodeSourceUrl(encoded: string): string | null {
 }
 
 /**
- * 將 URL 編碼為 Base64 URL-safe 格式
- */
-export function encodeSourceUrl(url: string): string {
-    try {
-        const base64 = btoa(unescape(encodeURIComponent(url)))
-        // 轉為 URL-safe: + -> -, / -> _, 移除 padding
-        return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-    } catch (error) {
-        console.error('Base64 encode error:', error)
-        return ''
-    }
-}
-
-/**
  * 從外部 URL 載入內容
  */
 export async function fetchFromUrl(url: string): Promise<UrlSourceResult> {
