@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
+import { ref, watch, onUnmounted } from 'vue'
 
 const props = withDefaults(defineProps<{
     modelValue: string
@@ -15,14 +14,19 @@ const emit = defineEmits<{
 // 本地狀態：即時顯示用戶輸入
 const localText = ref('')
 
-// Debounce 更新：延遲 300ms 觸發解析和儲存
-const debouncedUpdate = useDebounceFn((value: string) => {
-    emit('update:modelValue', value)
-}, 300)
+// 手動 debounce（可 cancel）
+let timer: ReturnType<typeof setTimeout> | null = null
+function cancelPending() { if (timer) { clearTimeout(timer); timer = null } }
+function scheduleEmit(value: string) {
+    cancelPending()
+    timer = setTimeout(() => { timer = null; emit('update:modelValue', value) }, 300)
+}
+onUnmounted(cancelPending)
 
-// 監聽 prop 變化（切換 workspace 時同步）
+// 監聽 prop 變化（外部更新時同步，cancel pending 避免舊值覆蓋）
 watch(() => props.modelValue, (newValue) => {
     if (newValue !== localText.value) {
+        cancelPending()
         localText.value = newValue
     }
 }, { immediate: true })
@@ -31,7 +35,15 @@ watch(() => props.modelValue, (newValue) => {
 function onInput(event: Event) {
     const value = (event.target as HTMLTextAreaElement).value
     localText.value = value
-    debouncedUpdate(value)
+    scheduleEmit(value)
+}
+
+// blur 時立刻 flush pending 變更（避免切換 tab 後資料不同步）
+function onBlur() {
+    cancelPending()
+    if (localText.value !== props.modelValue) {
+        emit('update:modelValue', localText.value)
+    }
 }
 </script>
 
@@ -40,6 +52,7 @@ function onInput(event: Event) {
     <textarea
       :value="localText"
       @input="onInput"
+      @blur="onBlur"
       class="editor-textarea"
       placeholder="輸入專案資料...
 

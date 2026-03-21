@@ -29,13 +29,13 @@ export function parseText(text: string): Project[] {
         if (!trimmedLine) continue
 
         // 檢查是否為專案名稱 (以冒號結尾，不是以 - 開頭)
-        if (!trimmedLine.startsWith('-') && trimmedLine.endsWith(':')) {
+        if (!trimmedLine.startsWith('-') && (trimmedLine.endsWith(':') || trimmedLine.endsWith('：'))) {
             // 儲存前一個專案
             if (currentProject) {
                 projects.push(currentProject)
             }
-            // 開始新專案 - 檢查是否有 ", pending" 標記
-            const rawName = trimmedLine.slice(0, -1).trim()
+            // 開始新專案 - 移除結尾冒號（半形或全形）
+            const rawName = trimmedLine.replace(/[:：]$/, '').trim()
             const pendingMatch = rawName.match(/^(.+),\s*pending$/i)
             const isPending = !!pendingMatch
             const projectName = isPending ? pendingMatch[1].trim() : rawName
@@ -146,8 +146,8 @@ export function clearDateCache(): void {
 
 /**
  * 標準化日期為完整日期格式
- * YYYY-MM -> YYYY-MM-01 (月初)
- * YYYY-MM-DD -> YYYY-MM-DD
+ * YYYY-MM -> YYYY-MM-01 (月初) 或月末
+ * YYYY-MM-DD -> YYYY-MM-DD (自動修正不合法日期如 04-31 → 04-30)
  */
 export function normalizeDate(date: string, isEnd: boolean = false): string {
     const cacheKey = `${date}:${isEnd}`
@@ -160,7 +160,6 @@ export function normalizeDate(date: string, isEnd: boolean = false): string {
     let result: string
     if (isMonthFormat(date)) {
         if (isEnd) {
-            // 月末日期
             const [year, month] = date.split('-').map(Number)
             const lastDay = new Date(year, month, 0).getDate()
             result = `${date}-${String(lastDay).padStart(2, '0')}`
@@ -168,7 +167,19 @@ export function normalizeDate(date: string, isEnd: boolean = false): string {
             result = `${date}-01`
         }
     } else {
-        result = date
+        // 驗證 YYYY-MM-DD：修正不合法日期（如 04-31 → 04-30）
+        const parts = date.split('-').map(Number)
+        if (parts.length === 3) {
+            const [y, m, d] = parts
+            const maxDay = new Date(y, m, 0).getDate()
+            if (d > maxDay) {
+                result = `${String(y)}-${String(m).padStart(2, '0')}-${String(maxDay).padStart(2, '0')}`
+            } else {
+                result = date
+            }
+        } else {
+            result = date
+        }
     }
 
     dateCache.set(cacheKey, result)
