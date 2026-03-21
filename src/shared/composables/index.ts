@@ -3,3 +3,4 @@
  */
 
 export * from './useGanttScale'
+export * from './useGanttData'
