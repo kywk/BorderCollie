@@ -20,18 +20,21 @@ const props = withDefaults(defineProps<{
   showHideControl: true
 })
 
-// 取得 store 作為預設資料來源
-const store = useProjectStore()
+// 判斷是否為外部嵌入模式 (Sheltie 透過 props 傳入資料)
+const isEmbedded = !!props.personAssignments
+
+// 只在非嵌入模式才取得 store（避免 border-collie store 未初始化時 crash）
+const store = isEmbedded ? null : useProjectStore()
 
 // 資料來源：優先使用 props，否則使用 store
-const personAssignmentsValue = computed(() => props.personAssignments ?? store.personAssignments)
-const allPersonsValue = computed(() => props.allPersons ?? store.allPersons)
-const scaleValue = computed(() => props.scale ?? store.scale)
-const barStyleValue = computed(() => props.barStyle ?? store.barStyle)
-const timeRangeValue = computed(() => props.timeRange ?? store.timeRange)
+const personAssignmentsValue = computed(() => props.personAssignments ?? store!.personAssignments)
+const allPersonsValue = computed(() => props.allPersons ?? store!.allPersons)
+const scaleValue = computed(() => props.scale ?? store!.scale)
+const barStyleValue = computed(() => props.barStyle ?? store!.barStyle)
+const timeRangeValue = computed(() => props.timeRange ?? store!.timeRange)
 
 // 根據資料來源選擇使用的 ganttScale
-const ganttScaleResult = props.personAssignments 
+const ganttScaleResult = isEmbedded
   ? useGanttScaleShared({ timeRange: timeRangeValue, scale: scaleValue })
   : useGanttScale()
 
